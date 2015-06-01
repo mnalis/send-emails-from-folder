@@ -11,7 +11,7 @@ use Fcntl ':flock';
 
 my $SENDMAIL = '/usr/sbin/sendmail';
 my $DELAY = 10;		# file must be this many seconds old to be considered for sending (to avoid race conditions and sending incomplete files)
-my $SLEEP = 2;		# wait this many seconds between sending mails
+my $SLEEP = 1;		# wait this many seconds between sending mails to avoid overloading system/SMTP server/...
 my $VERBOSE = 7;
 
 my $dir = $ARGV[1];
@@ -29,7 +29,12 @@ if (!defined $work_dir or !defined $sender) {
 my $start = time;
 
 opendir(my $dh, $work_dir);
-flock($dh, LOCK_EX) or die "Could not lock $work_dir: $!";	# lock directory so we won't get concurrent senders!
+open my $LOCK, "< $0" or die "can't lock $0";
+if (! flock $LOCK, LOCK_EX | LOCK_NB) {
+  say "$0 still locked by previous caller, exiting...";	# NB ideally we'd lock $work_dir instead of $0 (allowing some paralelization if using multiple dirs), but that dies with "(Are you trying to call flock() on dirhandle $_[...]?)" -- and reliable workarounds are not easy to found. So just lock whole script instead.
+  exit 2;
+}
+
 my @emails = grep { /\.eml$/i && -f "$work_dir/$_" } readdir($dh);
 
 foreach my $email (@emails) {
@@ -62,9 +67,10 @@ foreach my $email (@emails) {
   }
   
   if (defined $archive_dir) {
+    say "archiving $work_dir/$email to $archive_dir/$email" if $VERBOSE > 1;
     rename "$work_dir/$email", "$archive_dir/$email";
   } else {
-    say "removing $work_dir/$email" if $VERBOSE > 1;
+    say "removing $file" if $VERBOSE > 1;
   }
 }
 
