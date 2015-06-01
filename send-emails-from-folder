@@ -4,6 +4,68 @@
 use strict;
 use warnings;
 use autodie;
+use DirHandle;
+use diagnostics;
+use feature 'say';
+use Fcntl ':flock';
 
-my $dir = $ARGV[0];
-die "Usage: $0 <folder_with_eml_files>" unless defined $dir;
+my $SENDMAIL = '/usr/sbin/sendmail';
+my $DELAY = 10;		# file must be this many seconds old to be considered for sending (to avoid race conditions and sending incomplete files)
+my $SLEEP = 2;		# wait this many seconds between sending mails
+my $VERBOSE = 7;
+
+my $dir = $ARGV[1];
+my $sender = $ARGV[0];
+my $work_dir = $ARGV[1];
+my $archive_dir = $ARGV[2];
+
+if (!defined $work_dir or !defined $sender) {
+  say "Usage: $0 <sender_email> <directory_with_eml_files> [archive_dir]";
+  say "It will send all *.eml files in specified folder using /usr/sbin/sendmail wrapper";
+  say "If archive_dir is specified, sent e-mail will be moved archived there, otherwise they'll be removed";
+  exit 1;
+}
+
+my $start = time;
+
+opendir(my $dh, $work_dir);
+flock($dh, LOCK_EX) or die "Could not lock $work_dir: $!";	# lock directory so we won't get concurrent senders!
+my @emails = grep { /\.eml$/i && -f "$work_dir/$_" } readdir($dh);
+
+foreach my $email (@emails) {
+  my $file = "$work_dir/$email";
+  my $mtime = (stat($file))[9];
+  my $time_diff = $start - $mtime;
+  
+  say "found $file [$time_diff seconds old]" if $VERBOSE > 5;
+  if ($time_diff < $DELAY) {
+    say "ignoring $file, only $time_diff seconds old, which is less than $DELAY" if $VERBOSE > 1;
+    next;
+  }
+
+  my $CMD = "$SENDMAIL -f $sender -t";
+  say "sending $file ($time_diff seconds old)" if $VERBOSE > 0;
+  
+  open my $eml_fd, '<', $file;
+  open my $sendmail_fd, '|-', $CMD;
+  while (<$eml_fd>) {
+    print " email line: $_" if $VERBOSE > 7;
+    print $sendmail_fd $_ or die "can't feed $file to '$CMD': $!";
+  }
+  close $eml_fd;
+  close ($sendmail_fd) or die "can't finish feeding $file to '$CMD': $! ($?)";
+  sleep $SLEEP if $SLEEP;
+  
+  if ($? != 0) {
+    say "Can't send $file: exit code $?";
+    next;
+  }
+  
+  if (defined $archive_dir) {
+    rename "$work_dir/$email", "$archive_dir/$email";
+  } else {
+    say "removing $work_dir/$email" if $VERBOSE > 1;
+  }
+}
+
+closedir $dh; # this releases directory lock when we're finished (happens automatically on program termination anyway, but left in here so it is not added earlier by mistake)
