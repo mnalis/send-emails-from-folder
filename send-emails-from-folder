@@ -1,0 +1,9 @@
+#!/usr/bin/perl
+# Matija Nalis <mnalis-perl@axe.tomsoft.hr> GPLv3+ 2015-06-01
+# 
+use strict;
+use warnings;
+use autodie;
+
+my $dir = $ARGV[0];
+die "Usage: $0 <folder_with_eml_files>" unless defined $dir;
