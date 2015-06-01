@@ -5,5 +5,7 @@ optionally archiving (or removing) sent files.
 Recepients are determined automatically from "To:" lines in .eml files.
 
 you should run it from cron job via line like:
+<pre>
 # m h   dom mon dow user  command
 */15 *    *  *   *   root  /usr/local/bin/send-emails-from-folder sender@example.org /home/user/emails /home/user/archive
+</pre>
