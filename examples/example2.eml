@@ -1,0 +1,23 @@
+To: "Some Recipient" <somerecepient@example.com>
+From: "The Sender" <TheSender@example.org>
+Subject: test send1
+Date: Mon, 1 Jun 2015 11:49:40 GMT
+Message-Id: <pw3348506272l.875273062l1632872l7l@example.org>
+Content-Type: text/plain; charset="utf-8"
+
+
+this is test e-mail message
+in .eml format
+
+headers are:
+
+Return-Path: <somesender@example.com>
+To: "Some Recipient" <somerecepient@example.com>
+From: "The Sender" <TheSender@example.org>
+Subject: test send1
+Date: Mon, 1 Jun 2015 11:49:40 GMT
+Message-Id: <pw3348506272l.875273062l1632872l7l@example.org>
+Content-Type: text/plain; charset="utf-8"
+
+so let's see what we receive...
+(you need to fix From:/To: headers first)

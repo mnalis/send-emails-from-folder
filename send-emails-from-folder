@@ -71,6 +71,7 @@ foreach my $email (@emails) {
     rename "$work_dir/$email", "$archive_dir/$email";
   } else {
     say "removing $file" if $VERBOSE > 1;
+    unlink $file;
   }
 }
 
